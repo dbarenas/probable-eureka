@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+psycopg2-binary
+SQLAlchemy
+langchain
+openai
+tiktoken
+chromadb
+faiss-cpu # For local testing/alternative, though Chroma is primary for Docker
+python-dotenv # To load .env files for local development
+langchain-community
+langchain-openai
