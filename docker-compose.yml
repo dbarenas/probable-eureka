@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-ragdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      # You can mount an init script to create tables/views on startup
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rag_network
+
+  chroma:
+    image: chromadb/chroma:0.4.24 # Using a specific version for stability
+    restart: always
+    ports:
+      - "8001:8000" # Chroma runs on 8000 internally, mapping to 8001 host
+    volumes:
+      - chroma_data:/chroma/chroma # Persist Chroma data
+    networks:
+      - rag_network
+
+  app:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - chroma
+    environment:
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-ragdb}"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CHROMA_HOST: "chroma"
+      CHROMA_PORT: "8000" # Internal port for Chroma service
+      # Set PYTHONUNBUFFERED to ensure print statements are sent directly to terminal
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - .:/app # Mount current directory to /app in container for live reload (optional for dev)
+    networks:
+      - rag_network
+
+volumes:
+  postgres_data:
+  chroma_data:
+
+networks:
+  rag_network:
+    driver: bridge
